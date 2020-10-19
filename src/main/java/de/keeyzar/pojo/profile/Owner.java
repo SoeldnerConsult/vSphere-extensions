@@ -6,9 +6,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.client.CustomResource;
 
-@JsonDeserialize(
-        using = JsonDeserializer.None.class
-)
+@JsonDeserialize()
 public class Owner implements KubernetesResource {
 
     @JsonProperty

@@ -1,30 +1,75 @@
-# rest-json-quickstart project
+# vsphere kubernetes extensions
+1. fix Pod Security Policies for each freshly created Kubeflow namespace
+2. fix PersistentVolumeClaim for ReadWriteMany claims to new k8s storage class
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
+# 1. fix PSP
+is done via namespace watching
+new namespace? does corresponding profile exist? => kubeflow created namespace
+-> create PSP for namespace
 
-If you want to learn more about Quarkus, please visit its website: https://quarkus.io/ .
+# 2. fix PVC
+is done as an admission controller, because we can't modify claim after creation.
+when read write many is requested use storage class provided by config map within k8s
+- default storage class of vSphere cannot create RWMany SC; therefore an NFS Client must
+be provided, with a corresponding storageClass, which will be utilized for each and
+any read write many PVC
+- this is done, because in TKG setting a SC is set via TanzuKubernetesCluster Resource
+your new SC in this cluster is unknown to TKC resource in the supervisor cluster
+therefore you can't set it there.
+manually setting SC here will be overridden periodically.
+Change utilized storage class in each kubeflow resource or 
+write an admission controller, rewriting storage class for each read write many PVC
 
-## Running the application in dev mode
+# installation
+1. install initial resources (namespace...)
+2. fix configmap properties (name of storage class for read write many)
+3. package .jar ; create docker & Push docker file
+4. install resources like rolebindings & app deployment
+5. create certificate request, approve and finally push a webhook with
+certificate of app deployment
 
-You can run your application in dev mode that enables live coding using:
 ```
-./mvnw quarkus:dev
+kubectl apply -f additional/initial-resources.yaml
+
+#setup configuration
+readWriteManyStorageClass=nfs-client
+resourcePath=additional/resources.yaml
+sed -i "s/nfs-client/$readWriteManyStorageClass/" $resourcePath
+sed "s/nfs-client/$readWriteManyStorageClass/" $resourcePath
+
+#OPTIONAL: push docker image
+mvn package -DskipTests
+docker build -f src/main/docker/Dockerfile.jvm -t keeyzar/vsphere-extensions-jvm .
+docker push keeyzar/vsphere-extensions-jvm
+
+#create certifcate request and sign..
+#make sure, go; cfssl cfssljson are installed
+pushd .
+cd additional
+chmod +x create-cert.sh
+./create-cert.sh
+popd 
+
+#create all necessary resources
+k apply -f $resourcePath
+
+#deploy vsphere-extensions
+controller=$(kubectl -n vsphere-extensions get pods --selector=app=vsphere-extensions -ojsonpath='{.items[*].metadata.name}')
+kubectl -n vsphere-extensions wait --for=condition=Ready --timeout=300s pod/$controller
+
+webhookResource=additional/webhook.yaml
+cert=$(kubectl -n vsphere-extensions exec $controller -- cat /var/run/secrets/kubernetes.io/serviceaccount/ca.crt | base64 | tr -d '\n')
+sed -i.bak -E "s/caBundle:.*?/caBundle: $cert/" $webhookResource
+kubectl apply -f $webhookResource
+
+#check functionality
+k apply -f additional/test-pvc.yaml
+
+#compare storageclasses
+k get pvc -n default test-pvc -o=jsonpath="{.spec.storageClassName}"
+echo $readWriteManyStorageClass
+k delete pvc -n default test-pvc
+
+#check logs
+k logs -f $controller
 ```
-
-## Packaging and running the application
-
-The application can be packaged using `./mvnw package`.
-It produces the `rest-json-quickstart-1.0-SNAPSHOT-runner.jar` file in the `/target` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `target/lib` directory.
-
-The application is now runnable using `java -jar target/rest-json-quickstart-1.0-SNAPSHOT-runner.jar`.
-
-## Creating a native executable
-
-You can create a native executable using: `./mvnw package -Pnative`.
-
-Or, if you don't have GraalVM installed, you can run the native executable build in a container using: `./mvnw package -Pnative -Dquarkus.native.container-build=true`.
-
-You can then execute your native executable with: `./target/rest-json-quickstart-1.0-SNAPSHOT-runner`
-
-If you want to learn more about building native executables, please consult https://quarkus.io/guides/building-native-image.

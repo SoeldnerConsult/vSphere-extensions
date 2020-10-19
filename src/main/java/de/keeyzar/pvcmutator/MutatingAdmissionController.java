@@ -6,6 +6,7 @@ import io.fabric8.kubernetes.api.model.admission.AdmissionRequest;
 import io.fabric8.kubernetes.api.model.admission.AdmissionResponseBuilder;
 import io.fabric8.kubernetes.api.model.admission.AdmissionReview;
 import io.fabric8.kubernetes.api.model.admission.AdmissionReviewBuilder;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,24 +16,25 @@ import javax.json.JsonObject;
 import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
 import javax.json.bind.JsonbConfig;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import java.io.StringReader;
 import java.util.Base64;
 
 import static javax.json.bind.JsonbConfig.FORMATTING;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 
-@Path("/mutate")
+@Path("/pvc/mutate")
 @Produces(APPLICATION_JSON)
 @Consumes(APPLICATION_JSON)
 public class MutatingAdmissionController {
 
     private static final Logger log = LoggerFactory.getLogger(MutatingAdmissionController.class);
 
-    private QuantityDeserializeFixer quantityDeserializeFixer;
+    private final QuantityDeserializeFixer quantityDeserializeFixer;
+
+    @ConfigProperty(name = "vsphere-extensions.readwritemany-sc")
+    String storageClassName;
 
     @Inject
     public MutatingAdmissionController(QuantityDeserializeFixer quantityDeserializeFixer) {
@@ -56,7 +58,7 @@ public class MutatingAdmissionController {
             if(object.getSpec().getAccessModes().contains("ReadWriteMany")){
 
                 JsonObject original = toJsonObject(object);
-                object.getSpec().setStorageClassName("nfs-client");
+                object.getSpec().setStorageClassName(storageClassName);
                 JsonObject mutated = toJsonObject(object);
 
                 String patch = Json.createDiff(original, mutated).toString();
@@ -71,7 +73,7 @@ public class MutatingAdmissionController {
         }
 
         AdmissionReview admissionReview = new AdmissionReviewBuilder().withResponse(responseBuilder.build()).build();
-        //can't fix apiversion in kubernetes 1.17 ##it'll change it back to v1beta1...
+        //can't fix apiversion in kubernetes 1.17 it'll change it back v1, even though we apply v1beta1...
         admissionReview.setApiVersion("admission.k8s.io/v1");
         return admissionReview;
     }

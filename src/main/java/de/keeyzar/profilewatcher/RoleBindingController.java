@@ -6,16 +6,17 @@ import io.fabric8.kubernetes.api.model.rbac.RoleBindingBuilder;
 import io.fabric8.kubernetes.api.model.rbac.Subject;
 import io.fabric8.kubernetes.api.model.rbac.SubjectBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 @ApplicationScoped
 public class RoleBindingController {
-    private Logger LOGGER = Logger.getLogger(RoleBindingController.class.getName());
+    private static final Logger log = LoggerFactory.getLogger(RoleBindingController.class);
 
     private KubernetesClient kubernetesClient;
     public RoleBindingController() {
@@ -28,7 +29,7 @@ public class RoleBindingController {
 
     public boolean doesRoleBindingExists(String whichNamespace){
         String roleBindingName = NamingConvention.PSP_NAMING_PREFIX + whichNamespace;
-        LOGGER.info(() -> String.format("Searching for existing Rolebinding: %s", roleBindingName));
+        log.info("Searching for existing Rolebinding: {}", roleBindingName);
 
         boolean doesExist = kubernetesClient.rbac().roleBindings()
                 .inNamespace(whichNamespace)
@@ -36,9 +37,7 @@ public class RoleBindingController {
                 .fromServer()
                 .get() != null;
 
-        LOGGER.info(() -> String.format("Did we found a RoleBinding with the name %s ? %b",
-                roleBindingName, doesExist
-                ));
+        log.info("Did we found a RoleBinding with the name {} ? {}", roleBindingName, doesExist);
         return doesExist;
     }
 
@@ -63,7 +62,9 @@ public class RoleBindingController {
                 .build();
 
         retry(() -> {
+            //this may be... a bit of an overkill for a PoC..
             kubernetesClient.rbac().roleBindings().inNamespace(whichNamespace).create(pspForServiceAccount);
+            log.info("Created RoleBinding");
         });
     }
 
@@ -75,13 +76,14 @@ public class RoleBindingController {
                 break;
             } catch (Exception e){
                 if(counter == maxRetries){
-                    LOGGER.log(Level.SEVERE, e, () -> "Could not apply RoleBinding.. Stopping now");
+                    log.error("Could not apply RoleBinding.. Stopping now", e);
+                    throw e;
                 } else {
-                    LOGGER.log(Level.INFO, e, () -> "Could not apply RoleBinding, retrying in some seconds");
+                    log.info("Could not apply RoleBinding, retrying in some seconds");
                     try {
                         TimeUnit.SECONDS.sleep(2);
                     } catch (InterruptedException ex) {
-                        LOGGER.info(() -> "Thread was interrupted..");
+                        log.info("Thread was interrupted..");
                     }
                 }
             }

@@ -1,0 +1,10 @@
+{
+  "hosts": [
+    "vsphere-extensions.vsphere-extensions.svc"
+  ],
+  "CN": "vsphere-extensions.vsphere-extensions.svc",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  }
+}

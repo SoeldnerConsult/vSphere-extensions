@@ -1,0 +1,143 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: customized-rolebinding-creator-role
+rules:
+  - apiGroups: [""] # "" indicates the core API group
+    resources: ["namespaces"]
+    verbs: ["get", "watch", "list"]
+    #enable configuration via configmaps
+  - apiGroups: [""]
+    resources: [ "configmaps" ]
+    verbs: [ "get" ]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["rolebindings"]
+    verbs: ["get", "create", "list"]
+  - apiGroups: ["kubeflow.org"]
+    resources: ["profiles"]
+    verbs: ["get", "list"]
+  - apiGroups: ["policy"]
+    resources: ["podsecuritypolicies"]
+    verbs: ["use"]
+
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: vsphere-extensions-default-rolebinding
+roleRef:
+  kind: ClusterRole
+  name: customized-rolebinding-creator-role
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    apiGroup: ""
+    name: default
+    namespace: vsphere-extensions
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: rb-all-sa_ns-vsphere-extensions
+  namespace: vsphere-extensions
+roleRef:
+  kind: ClusterRole
+  name: psp:vmware-system-privileged
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    apiGroup: ""
+    name: default
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: vsphere-extensions
+  namespace: vsphere-extensions
+  labels:
+    app: vsphere-extensions
+spec:
+  ports:
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: 8080
+  selector:
+    app: vsphere-extensions
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vsphere-extensions
+  namespace: vsphere-extensions
+  labels:
+    app: vsphere-extensions
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vsphere-extensions
+  template:
+    metadata:
+      labels:
+        app: vsphere-extensions
+      name: vsphere-extensions
+      namespace: vsphere-extensions
+    spec:
+      initContainers:
+        - name: pem-to-keystore
+          image: registry.access.redhat.com/redhat-sso-7/sso71-openshift:1.1-16
+          env:
+            - name: keyfile
+              value: /certs/tls.key
+            - name: crtfile
+              value: /certs/tls.crt
+            - name: keystore_pkcs12
+              value: /var/run/secrets/java.io/keystores/keystore.pkcs12
+            - name: keystore_jks
+              value: /var/run/secrets/java.io/keystores/keystore.jks
+            - name: password
+              # password is the default value in quarkus's CertificateConfig
+              value: password
+          command: ['/bin/bash']
+          args: ['-c', "openssl pkcs12 -export -inkey $keyfile -in $crtfile -out $keystore_pkcs12 -password pass:$password && keytool -importkeystore -noprompt -srckeystore $keystore_pkcs12 -srcstoretype pkcs12 -destkeystore $keystore_jks -storepass $password -srcstorepass $password"]
+          volumeMounts:
+            - name: certs-volume
+              mountPath: /certs
+              readOnly: true
+            - name: keystore-volume
+              mountPath: /var/run/secrets/java.io/keystores
+      containers:
+        - name: vsphere-extensions
+          image: keeyzar/vsphere-extensions-jvm
+          env:
+            - name: JAVA_OPTIONS
+              value: -Dquarkus.http.host=0.0.0.0
+                -Dquarkus.http.ssl-port=8080
+                -Dquarkus.http.ssl.certificate.key-store-file=/var/run/secrets/java.io/keystores/keystore.jks
+                -Dquarkus.http.ssl.certificate.key-store-password=password
+                -Djava.util.logging.manager=org.jboss.logmanager.LogManager
+          volumeMounts:
+            - name: certs-volume
+              mountPath: /certs
+              readOnly: true
+            - name: keystore-volume
+              mountPath: /var/run/secrets/java.io/keystores
+      volumes:
+        - name: certs-volume
+          secret:
+            secretName: vsphere-extensions-tls
+        - name: keystore-volume
+          emptyDir: {}
+---
+#this is a bug in kubernetes client, we
+#can't setup config maps not in the default namespace...
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vsphere-extensions-cm
+  namespace: default
+data:
+  application.properties: |-
+    vsphere-extensions.readwritemany-sc=nfs-client

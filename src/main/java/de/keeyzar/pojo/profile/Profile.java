@@ -1,9 +1,11 @@
 package de.keeyzar.pojo.profile;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.client.CustomResource;
 
+@JsonIgnoreProperties("status")
 public class Profile extends CustomResource {
 
     @JsonProperty("apiVersion")
@@ -18,18 +20,14 @@ public class Profile extends CustomResource {
     @JsonProperty()
     private ProfileSpec spec;
 
-    @JsonProperty()
-    private ProfileStatus status;
-
     public Profile() {
     }
 
-    public Profile(String apiVersion, String kind, ObjectMeta metadata, ProfileSpec spec, ProfileStatus status) {
+    public Profile(String apiVersion, String kind, ObjectMeta metadata, ProfileSpec spec) {
         this.apiVersion = apiVersion;
         this.kind = kind;
         this.metadata = metadata;
         this.spec = spec;
-        this.status = status;
     }
 
     @Override
@@ -69,13 +67,6 @@ public class Profile extends CustomResource {
         this.spec = spec;
     }
 
-    public ProfileStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(ProfileStatus status) {
-        this.status = status;
-    }
 
     @Override
     public String toString() {
@@ -84,7 +75,6 @@ public class Profile extends CustomResource {
                 ", kind='" + kind + '\'' +
                 ", metadata=" + metadata +
                 ", spec=" + spec +
-                ", status=" + status +
                 '}';
     }
 }

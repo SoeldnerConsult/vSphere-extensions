@@ -1,0 +1,22 @@
+  apiVersion: admissionregistration.k8s.io/v1
+  kind: MutatingWebhookConfiguration
+  metadata:
+    name: "mutating.vsphere-extensions.keeyzar.de"
+  webhooks:
+    - name: "validating.vsphere-extensions.keeyzar.de"
+      rules:
+        - apiGroups:   [""]
+          apiVersions: ["v1"]
+          operations:  ["CREATE"]
+          resources:   ["persistentvolumeclaims"]
+          scope:       "*"
+      clientConfig:
+        service:
+          namespace: "vsphere-extensions"
+          name: "vsphere-extensions"
+          path: "/pvc/mutate"
+        caBundle: "Ci0tLS0tQk...<`caBundle` is a PEM encoded CA bundle which will be used to validate the webhook's server certificate.>...tLS0K"
+      admissionReviewVersions: ["v1"]
+      sideEffects: None
+      failurePolicy: Ignore
+      timeoutSeconds: 5

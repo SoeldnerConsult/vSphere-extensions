@@ -7,14 +7,15 @@ import io.fabric8.kubernetes.api.model.Doneable;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.MixedOperation;
 import io.fabric8.kubernetes.client.dsl.Resource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import java.util.logging.Logger;
 
 @ApplicationScoped
 public class ProfileController {
-    private Logger LOGGER = Logger.getLogger(ProfileController.class.getName());
+    private static final Logger log = LoggerFactory.getLogger(ProfileController.class);
 
     private KubernetesClient kubernetesClient;
     private ProfileCRDProvider profileCRDProvider;
@@ -28,7 +29,7 @@ public class ProfileController {
     }
 
     public boolean doesProfileExist(String name){
-        LOGGER.info(() -> String.format("Searching profile: %s", name));
+        log.info("Searching profile: {}", name);
         MixedOperation<Profile, ProfileList, Doneable<Profile>, Resource<Profile, Doneable<Profile>>> profileOp =
                 kubernetesClient.customResources(
                 profileCRDProvider.getCRDContext(), Profile.class, ProfileList.class, null
@@ -42,8 +43,5 @@ public class ProfileController {
             e.printStackTrace();
             throw e;
         }
-
-//        LOGGER.info(() -> String.format("Did we find a profile? %b", profile != null));
-//        return profile != null;
     }
 }
