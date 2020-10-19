@@ -1,0 +1,119 @@
+{
+  "additionalProperties": {
+  },
+  "apiVersion": "admission.k8s.io/v1",
+  "kind": "AdmissionReview",
+  "request": {
+    "additionalProperties": {
+    },
+    "dryRun": false,
+    "kind": {
+      "additionalProperties": {
+      },
+      "group": "",
+      "kind": "PersistentVolumeClaim",
+      "version": "v1"
+    },
+    "name": "test-pvc",
+    "namespace": "kubeflow-extension",
+    "object": {
+      "additionalProperties": {
+      },
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "additionalProperties": {
+        },
+        "annotations": {
+          "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"kind\":\"PersistentVolumeClaim\",\"metadata\":{\"annotations\":{},\"name\":\"test-pvc\",\"namespace\":\"kubeflow-extension\"},\"spec\":{\"accessModes\":[\"ReadWriteOnce\"],\"resources\":{\"requests\":{\"storage\":3Gi}},\"storageClassName\":\"gold-tanzu-kubernetes-storage-policy\"}}\n"
+        },
+        "finalizers": [
+          "kubernetes.io/pvc-protection"
+        ],
+        "managedFields": [
+        ],
+        "name": "test-pvc",
+        "namespace": "kubeflow-extension",
+        "ownerReferences": [
+        ]
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "additionalProperties": {
+        },
+        "resources": {
+          "additionalProperties": {
+          },
+          "requests": {
+            "storage": {
+              "additionalProperties": {
+              },
+              "amount": "3",
+              "format": "Gi"
+            }
+          }
+        },
+        "storageClassName": "gold-tanzu-kubernetes-storage-policy",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "accessModes": [
+        ],
+        "additionalProperties": {
+        },
+        "conditions": [
+        ],
+        "phase": "Pending"
+      }
+    },
+    "operation": "CREATE",
+    "options": {
+      "additionalProperties": {
+      },
+      "apiVersion": "meta.k8s.io/v1",
+      "dryRun": [
+      ],
+      "kind": "CreateOptions"
+    },
+    "requestKind": {
+      "additionalProperties": {
+      },
+      "group": "",
+      "kind": "PersistentVolumeClaim",
+      "version": "v1"
+    },
+    "requestResource": {
+      "additionalProperties": {
+      },
+      "group": "",
+      "resource": "persistentvolumeclaims",
+      "version": "v1"
+    },
+    "resource": {
+      "additionalProperties": {
+      },
+      "group": "",
+      "resource": "persistentvolumeclaims",
+      "version": "v1"
+    },
+    "uid": "b732106d-543e-4701-817b-9f9685bc79cf",
+    "userInfo": {
+      "additionalProperties": {
+      },
+      "groups": [
+        "sso:ComponentManager.Administrators@vsphere.local",
+        "sso:LicenseService.Administrators@vsphere.local",
+        "sso:Administrators@vsphere.local",
+        "sso:Everyone@vsphere.local",
+        "sso:CAAdmins@vsphere.local",
+        "sso:SystemConfiguration.Administrators@vsphere.local",
+        "sso:SystemConfiguration.BashShellAdministrators@vsphere.local",
+        "sso:Users@vsphere.local",
+        "system:authenticated"
+      ],
+      "username": "sso:Administrator@vsphere.local"
+    }
+  }
+}
