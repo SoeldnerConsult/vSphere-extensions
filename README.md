@@ -35,7 +35,6 @@ kubectl apply -f additional/initial-resources.yaml
 readWriteManyStorageClass=nfs-client
 resourcePath=additional/resources.yaml
 sed -i "s/nfs-client/$readWriteManyStorageClass/" $resourcePath
-sed "s/nfs-client/$readWriteManyStorageClass/" $resourcePath
 
 #OPTIONAL: push docker image
 mvn package -DskipTests
@@ -63,13 +62,21 @@ sed -i.bak -E "s/caBundle:.*?/caBundle: $cert/" $webhookResource
 kubectl apply -f $webhookResource
 
 #check functionality
-k apply -f additional/test-pvc.yaml
+kubectl apply -f additional/example-pvc.yaml
 
 #compare storageclasses
-k get pvc -n default test-pvc -o=jsonpath="{.spec.storageClassName}"
+kubectl get pvc -n default test-pvc -o=jsonpath="{.spec.storageClassName}"
 echo $readWriteManyStorageClass
-k delete pvc -n default test-pvc
+kubectl delete pvc -n default test-pvc
 
 #check logs
-k logs -f $controller
+kubectl logs -n vsphere-extensions --selector=app=vsphere-extensions --tail=-1
+```
+
+## changing the storage class
+```
+kubectl -n vsphere-extensions-cm edit cm
+#and change the set up storage class
+#finally
+kubectl -n vsphere-extensions rollout restart deployment vsphere-extensions
 ```

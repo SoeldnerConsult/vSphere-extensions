@@ -13,6 +13,7 @@ apiVersion: certificates.k8s.io/v1beta1
 kind: CertificateSigningRequest
 metadata:
   name: vsphere-extensions
+  namespace: vsphere-extensions
 spec:
   groups:
   - system:authenticated
@@ -24,16 +25,16 @@ spec:
 EOF
 
 # Approve certificate
-kubectl certificate approve vsphere-extensions
+kubectl -n vsphere-extensions certificate approve vsphere-extensions
 
 sleep 5s
 
 # Download public key
-kubectl get csr vsphere-extensions -o jsonpath='{.status.certificate}' | base64 --decode > vsphere-extensions.crt
+kubectl -n vsphere-extensions get csr vsphere-extensions -o jsonpath='{.status.certificate}' | base64 --decode > vsphere-extensions.crt
 
 cp vsphere-extensions-key.pem tls.key
 cp vsphere-extensions.crt tls.crt
-kubectl create secret tls vsphere-extensions-tls -n vsphere-extensions --key ./tls.key --cert ./tls.crt
+kubectl -n vsphere-extensions create secret tls vsphere-extensions-tls -n vsphere-extensions --key ./tls.key --cert ./tls.crt
 
 # Display public key content
 openssl x509 -in tls.crt -text
